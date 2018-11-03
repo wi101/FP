@@ -1,4 +1,4 @@
-package fp.datastructures
+package fp.part1.datastructures
 
 sealed trait Tree[+A]
 case class Leaf[A](value: A) extends Tree[A]

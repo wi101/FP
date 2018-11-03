@@ -1,4 +1,4 @@
-package fp.handlingerrors
+package fp.part1.handlingerrors
 
 sealed trait Option[+A] {
 

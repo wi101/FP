@@ -1,4 +1,4 @@
-package fp.gettingstarted
+package fp.part1.gettingstarted
 
 import scala.annotation.tailrec
 

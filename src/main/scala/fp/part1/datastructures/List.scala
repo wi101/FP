@@ -1,4 +1,4 @@
-package fp.datastructures
+package fp.part1.datastructures
 
 sealed trait List[+A]
 case object Nil extends List[Nothing]
