@@ -15,17 +15,14 @@ object EducationalPath extends App {
                    skills: Vector[Skill])
 
   def addExperience(experience: Experience): State[Story, Option[Education]] =
-    State(
-      oldState =>
-        oldState.schoolLevel -> oldState.copy(
-          experiences = oldState.experiences :+ experience))
+    State(oldState =>
+      None -> oldState.copy(experiences = oldState.experiences :+ experience))
   def updateEducation(
-                       maybeLevel: Option[Education]): State[Story, Option[Education]] = {
+      maybeLevel: Option[Education]): State[Story, Option[Education]] = {
     State(oldState => maybeLevel -> oldState.copy(schoolLevel = maybeLevel))
   }
   def addSkill(skill: Skill): State[Story, Option[Education]] =
-    State(oldState =>
-      oldState.schoolLevel -> oldState.copy(skills = oldState.skills :+ skill))
+    State(oldState => None -> oldState.copy(skills = oldState.skills :+ skill))
 
   sealed trait Event
   case class GoToSchool(level: String) extends Event
