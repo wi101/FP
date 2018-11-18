@@ -47,24 +47,29 @@ object EducationalPath extends App {
   val initialStory: Story =
     Story(LocalDate.of(1990, 9, 22), None, Vector.empty, Vector.empty)
 
-  def makeStory(event: Event): State[Story, Option[Education]] = event match {
-    case GoToSchool(level) =>
-      updateEducation(Some(Education(LocalDate.now, level)))
-    case FinishSchool => updateEducation(None)
-    case AddExperience(subject) =>
-      addExperience(Experience(LocalDate.now, subject))
-    case AddSkill(subject) => addSkill(Skill(LocalDate.now, subject))
-  }
+  def makeStory(event: Event,
+                date: LocalDate): State[Story, Option[Education]] =
+    event match {
+      case GoToSchool(level) =>
+        updateEducation(Some(Education(date, level)))
+      case FinishSchool => updateEducation(None)
+      case AddExperience(subject) =>
+        addExperience(Experience(date, subject))
+      case AddSkill(subject) => addSkill(Skill(date, subject))
+    }
 
-  def age(birthday: LocalDate): Int = LocalDate.now.getYear - birthday.getYear
-  def evaluate(scenario: List[Event]): State[Story, (Int, List[Education])] =
+  def age(date: LocalDate, birthday: LocalDate): Int =
+    date.getYear - birthday.getYear
+  def evaluate(scenario: List[Event],
+               date: LocalDate): State[Story, (Int, List[Education])] =
     for {
       education <- State
-        .sequence(scenario.map(event => makeStory(event)))
+        .sequence(scenario.map(event => makeStory(event, date)))
         .map(_.flatten)
       state <- State.get
-    } yield (age(state.birthday), education)
+    } yield (age(date, state.birthday), education)
 
-  println(s"*** evaluate scenario: ${evaluate(scenario).run(initialStory)}")
+  println(
+    s"*** evaluate scenario: ${evaluate(scenario, LocalDate.now).run(initialStory)}")
 
 }
