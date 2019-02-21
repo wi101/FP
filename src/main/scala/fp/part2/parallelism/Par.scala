@@ -43,7 +43,7 @@ object Par {
   /**
     * it wraps a single value that's why it's called unit, it's always done and can't be cancelled
     */
-  def unit[A](a: A): Par[A] = (es: ExecutorService) => UnitFuture(a)
+  def unit[A](a: A): Par[A] = _ => UnitFuture(a)
 
   /**
     * This is a type Future(a): get is a computed value of this future,
@@ -59,7 +59,7 @@ object Par {
 
   /**
     * Combines two parallel computations ? this doesn't evaluate the call of f in separate threads,
-    * So we need to run a and b in separate logical thread in order to provide parallel computations!
+    * We can always do fork(map2(a,b)(f)) if we want the evaluation of f to occur in a separate thread.
     * But let's implement map2 assuming that a & b are in separate threads
     */
   def map2[A, B, C](a: Par[A], b: Par[B])(f: (A, B) => C): Par[C] =
@@ -77,7 +77,7 @@ object Par {
     }
 
   case class Map2Future[A, B, C](a: Future[A], b: Future[B], f: (A, B) => C)
-    extends Future[C] {
+      extends Future[C] {
     var cache: Option[C] = None
 
     def cancel(x: Boolean): Boolean = a.cancel(x) || b.cancel(x)
@@ -109,7 +109,7 @@ object Par {
   def fork[A](a: => Par[A]): Par[A] =
     es =>
       es.submit(new Callable[A] {
-        def call: A = run(es)(a).get
+        def call: A = a(es).get
       })
 
   /**
@@ -161,13 +161,13 @@ object Par {
   def flatten[A](p: Par[Par[A]]): Par[A] = flatMap(p)(identity)
 
   def map3[A, B, C, D](pa: Par[A], pb: Par[B], pc: Par[C])(
-    f3: (A, B, C) => D): Par[D] =
+      f3: (A, B, C) => D): Par[D] =
     map2(map2(pa, pb) { case (a, b) => (a, b) }, pc) {
       case ((a, b), c) => f3(a, b, c)
     }
 
   def map4[A, B, C, D, E](pa: Par[A], pb: Par[B], pc: Par[C], pd: Par[D])(
-    f4: (A, B, C, D) => E): Par[E] =
+      f4: (A, B, C, D) => E): Par[E] =
     map2(
       map2(pa, pb) { case (a, b) => (a, b) },
       map2(pc, pd) { case (c, d) => (c, d) }
@@ -212,16 +212,16 @@ object Par {
     * To check the identity law
     */
   def equals[A, B](e: ExecutorService)(p1: Par[A], p2: Par[B]): Boolean =
-    p1(e).get == p2(e).get
+    run(e)(p1).get == run(e)(p2).get
+
   /**
-    * The law of foking:
-    * fork(x) should do the same thing as x  but asynchronously:
-    * fork(x) == x
-    *
-    */
+  * The law of foking:
+  * fork(x) should do the same thing as x  but asynchronously:
+  * fork(x) == x
+  *
+  */
 
 }
-
 object example extends App {
   import Par._
 
@@ -229,7 +229,7 @@ object example extends App {
     if (ints.size <= 1) Par.unit(ints.headOption getOrElse (0))
     else {
       val (l, r) = ints.splitAt(ints.size / 2)
-      Par.map2(Par.fork(sum(l)), Par.fork(sum(r)))(_ + _)
+      Par.fork(Par.map2(sum(l), sum(r))(_ + _))
     }
 
   def max(ints: IndexedSeq[Int]): Par[Int] =
@@ -238,8 +238,7 @@ object example extends App {
   def getNbWords(paragraphs: List[String]): Par[Int] =
     Par.map(unit(paragraphs))(_.flatMap(_.split(" ")).size)
 
-  //  val es = Executors.newFixedThreadPool(8)
-  //  val s = sum(1 to 30).run(es).get
-  //
-  //  println(s"the sum of 1 .. 100 is: $s")
+  implicit val es = Executors.newFixedThreadPool(2)
+  Par.equals(es)(fork(lazyUnit(1)), lazyUnit(1))
+  es.shutdown()
 }
