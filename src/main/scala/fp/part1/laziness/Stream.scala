@@ -113,6 +113,12 @@ sealed trait Stream[+A] { self =>
       val b = f(a, initial)
       (b, cons(b, s))
     }._2
+
+  @annotation.tailrec
+  final def find(f: A => Boolean): Option[A] = this match {
+    case Empty => None
+    case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
+  }
 }
 
 case object Empty extends Stream[Nothing]
